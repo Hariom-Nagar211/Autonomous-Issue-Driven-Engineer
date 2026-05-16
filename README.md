@@ -61,14 +61,14 @@ The live GitHub flow looks like this:
 
 1. A developer opens a GitHub issue.
 2. GitHub sends an `issues` webhook to AIDE.
-3. AIDE clones the repository locally.
-4. AIDE parses the repository and builds a retrieval index.
-5. AIDE finds relevant files and creates a repair plan.
-6. AIDE edits the likely file(s), validates syntax, and runs tests when present.
-7. AIDE creates a branch, pushes the fix, and opens a draft PR.
-8. AIDE comments back on the issue with the result.
+3. AAIE clones the repository locally.
+4. AAIE parses the repository and builds a retrieval index.
+5. AAIE finds relevant files and creates a repair plan.
+6. AAIE edits the likely file(s), validates syntax, and runs tests when present.
+7. AAIE creates a branch, pushes the fix, and opens a draft PR.
+8. AAIE comments back on the issue with the result.
 
-You can also run AIDE manually from the Streamlit UI without GitHub webhooks.
+You can also run AAIE manually from the Streamlit UI without GitHub webhooks.
 
 ## Project Structure
 
@@ -209,16 +209,16 @@ Later, when you create the GitHub webhook, paste the exact same value into the w
 
 ## How To Run Autonomous AI Engineer
 
-AIDE can run in two ways. The recommended path is Docker because it keeps the backend and frontend setup reproducible. If you prefer direct Python development, use the non-Docker path.
+AAIE can run in two ways. The recommended path is Docker because it keeps the backend and frontend setup reproducible. If you prefer direct Python development, use the non-Docker path.
 
 - Option 1: run with Docker Compose
 - Option 2: run without Docker, directly with Python
 
 Both options support the same product workflows:
 
-- Manual fixing without PR: AIDE analyzes and fixes code from the Streamlit UI, then you review the local job output yourself.
-- Manual fixing with draft PR: AIDE analyzes and fixes code from the Streamlit UI, then pushes a branch and opens a draft PR.
-- GitHub webhook automation: AIDE reacts automatically when a new GitHub issue is opened, fixes the code, and opens a draft PR.
+- Manual fixing without PR: AAIE analyzes and fixes code from the Streamlit UI, then you review the local job output yourself.
+- Manual fixing with draft PR: AAIE analyzes and fixes code from the Streamlit UI, then pushes a branch and opens a draft PR.
+- GitHub webhook automation: AAIE reacts automatically when a new GitHub issue is opened, fixes the code, and opens a draft PR.
 
 ## Option 1: Run With Docker
 
@@ -257,7 +257,7 @@ Open the services:
 - API health check: `http://localhost:8000/api/status`
 - Streamlit UI: `http://localhost:18601`
 
-The frontend container still runs Streamlit on port `8501` internally, but Docker exposes it on host port `18601` to avoid conflicts with locally running Streamlit apps or Windows-reserved ports.
+The frontend container runs Streamlit on port `8501` internally, but Docker exposes it on host port `18601` to avoid conflicts with locally running Streamlit apps or Windows-reserved ports.
 
 ### 3. Manual fixing without PR in Docker
 
@@ -267,25 +267,25 @@ Use this when you want Autonomous AI Engineer to fix code locally but you do not
 2. Paste the GitHub repository URL.
 3. Describe the issue clearly.
 4. Leave `Open a draft Pull Request if the fix succeeds` unchecked.
-5. Click `Run AIDE`.
+5. Click `Run AAIE`.
 6. Review the plan, files, and diff in the UI.
 
 ### 4. Manual fixing with draft PR in Docker
 
-Use this when you want to manually submit a problem from the UI and have AIDE open a draft PR after a successful fix.
+Use this when you want to manually submit a problem from the UI and have AAIE open a draft PR after a successful fix.
 
 1. Open `http://localhost:18601`.
 2. Paste the GitHub repository URL.
 3. Describe the issue clearly.
 4. Check `Open a draft Pull Request if the fix succeeds`.
 5. Confirm repository owner, repository name, and base branch.
-6. Click `Run AIDE`.
+6. Click `Run AAIE`.
 
 This uses `GITHUB_TOKEN` from `.env` inside the API container. The token must have repository write permissions.
 
 ### 5. GitHub webhook automation with Docker
 
-Use this when you want new GitHub issues to trigger AIDE automatically.
+Use this when you want new GitHub issues to trigger AAIE automatically.
 
 Keep Docker Compose running:
 
@@ -328,10 +328,10 @@ Example issue:
 
 Expected result:
 
-- AIDE comments that it started
-- AIDE fixes the code
-- AIDE opens a draft PR
-- AIDE comments the PR link back on the issue
+- AAIE comments that it started
+- AAIE fixes the code
+- AAIE opens a draft PR
+- AAIE comments the PR link back on the issue
 
 ## Option 2: Run Without Docker
 
@@ -393,7 +393,7 @@ The frontend talks to the API at `http://localhost:8000` by default.
 2. Paste the GitHub repository URL.
 3. Describe the issue clearly.
 4. Leave `Open a draft Pull Request if the fix succeeds` unchecked.
-5. Click `Run AIDE`.
+5. Click `Run AAIE`.
 6. Review the local job output yourself.
 
 ### 5. Manual fixing with draft PR without Docker
@@ -403,7 +403,7 @@ The frontend talks to the API at `http://localhost:8000` by default.
 3. Describe the issue clearly.
 4. Check `Open a draft Pull Request if the fix succeeds`.
 5. Confirm repository owner, repository name, and base branch.
-6. Click `Run AIDE`.
+6. Click `Run AAIE`.
 
 This requires `GITHUB_TOKEN` in `.env` with repository write permissions.
 
@@ -436,7 +436,7 @@ Then configure the GitHub webhook with:
 - Events: select `Issues`
 - Active: enabled
 
-Open a new GitHub issue to trigger AIDE.
+Open a new GitHub issue to trigger AAIE.
 
 ## Future Improvements
 
