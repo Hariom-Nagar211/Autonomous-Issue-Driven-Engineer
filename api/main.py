@@ -3,6 +3,7 @@ import hmac
 import hashlib
 import asyncio
 import json
+import traceback
 import uuid
 from contextlib import asynccontextmanager
 from concurrent.futures import ThreadPoolExecutor
@@ -27,7 +28,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Autonomous AI Engineer",
+    title="Autonomous Issue Driven Engineer",
     description="Automatically fixes GitHub issues and opens Draft Pull Requests.",
     version="1.0.0",
     lifespan=lifespan,
@@ -177,6 +178,7 @@ def run_aide_job(job_id: str, request: AnalyzeRequest):
         jobs[job_id]["error"] = str(e)
         _comment_job_result(request, job_id, result=None, error=str(e))
         print(f"Job {job_id} failed: {e}")
+        traceback.print_exc()
 
 
 @app.get("/api/status")

@@ -1,109 +1,146 @@
 import os
 from dotenv import load_dotenv
+from typing import List, Dict, TYPE_CHECKING
+from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
+
+if TYPE_CHECKING:
+    from langchain_core.language_models import BaseLLM
 
 load_dotenv()
 
 
 class LLMService:
     """
-    Unified LLM service supporting:
-    - 'ollama'    → Local Ollama          (no key needed)
-    - 'gemini'    → Google Gemini         (GEMINI_API_KEY)
-    - 'groq'      → Groq API              (GROQ_API_KEY)
-    - 'anthropic' → Anthropic Claude      (ANTHROPIC_API_KEY)
-    - 'openai'    → OpenAI GPT            (OPENAI_API_KEY)
-    - 'grok'      → xAI Grok              (XAI_API_KEY)
+    Unified LLM service using LangChain for simplified integration.
+    Supports 4 providers in this order: openai, anthropic, gemini, ollama
+    
+    Environment variables:
+    - LLM_PROVIDER: 'openai', 'anthropic', 'gemini', or 'ollama' (default: 'ollama')
+    - LLM_MODEL: specific model name
+    - OPENAI_API_KEY: for OpenAI models
+    - ANTHROPIC_API_KEY: for Anthropic models
+    - GOOGLE_API_KEY: for Google Gemini
     """
 
-    PROVIDER_CONFIG = {
-        "grok":      ("XAI_API_KEY",       "https://api.x.ai/v1",                                      "grok-beta"),
-        "groq":      ("GROQ_API_KEY",      "https://api.groq.com/openai/v1",                           "llama-3.3-70b-versatile"),
-        "gemini":    ("GEMINI_API_KEY",    "https://generativelanguage.googleapis.com/v1beta/openai/", "gemini-2.0-flash"),
-        "openai":    ("OPENAI_API_KEY",    "https://api.openai.com/v1",                                "gpt-4o"),
-        "anthropic": ("ANTHROPIC_API_KEY", None,                                                        "claude-sonnet-4-20250514"),
+    # Supported providers in priority order
+    SUPPORTED_PROVIDERS = ["openai", "anthropic", "gemini", "ollama"]
+    
+    # Default models for each provider
+    DEFAULT_MODELS = {
+        "openai": "gpt-4o-mini",
+        "anthropic": "claude-3-5-sonnet-20241022",
+        "gemini": "gemini-2.0-flash",
+        "ollama": "qwen2.5-coder:7b",
     }
 
     def __init__(self, provider: str = None, model: str = None):
+        """
+        Initialize LLM service.
+        
+        Args:
+            provider: LLM provider name (openai, anthropic, gemini, ollama)
+            model: Specific model name
+        """
         self.provider = (provider or os.environ.get("LLM_PROVIDER", "ollama")).lower()
-        self.model = model or os.environ.get("LLM_MODEL") or self._default_model()
-        self.client = self._init_client()
-
-    def _default_model(self) -> str:
-        if self.provider == "ollama":
-            return "qwen2.5-coder:7b"
-        if self.provider in self.PROVIDER_CONFIG:
-            return self.PROVIDER_CONFIG[self.provider][2]
-        return "qwen2.5-coder:7b"
-
-    def _init_client(self):
-        if self.provider == "ollama":
-            return None
-
-        if self.provider not in self.PROVIDER_CONFIG:
+        
+        if self.provider not in self.SUPPORTED_PROVIDERS:
             raise ValueError(
-                f"Unknown LLM_PROVIDER: '{self.provider}'. "
-                f"Choose from: ollama, gemini, groq, anthropic, openai, grok"
+                f"Unsupported provider: '{self.provider}'. "
+                f"Supported providers: {', '.join(self.SUPPORTED_PROVIDERS)}"
             )
+        
+        self.model = model or os.environ.get("LLM_MODEL") or self.DEFAULT_MODELS[self.provider]
+        self.llm = self._initialize_llm()
 
-        env_key, base_url, _ = self.PROVIDER_CONFIG[self.provider]
-        api_key = os.environ.get(env_key)
-
-        if not api_key:
-            raise RuntimeError(
-                f"{env_key} not set in .env. Required for provider '{self.provider}'."
-            )
-
-        # Anthropic has its own SDK
-        if self.provider == "anthropic":
-            try:
-                import anthropic
-                return anthropic.Anthropic(api_key=api_key)
-            except ImportError:
-                raise ImportError("Run: pip install anthropic")
-
-        # All others use OpenAI-compatible SDK
-        try:
-            from openai import OpenAI
-            return OpenAI(api_key=api_key, base_url=base_url)
-        except ImportError:
-            raise ImportError("Run: pip install openai")
-
-    def chat(self, messages: list, temperature: float = 0.2) -> dict:
-        """Always returns: {'message': {'content': str}}"""
-
-        if self.provider == "anthropic":
-            # Anthropic uses a different messages format — system prompt must be separate
-            system_msg = next((m["content"] for m in messages if m["role"] == "system"), None)
-            user_msgs = [m for m in messages if m["role"] != "system"]
-
-            kwargs = dict(
+    def _initialize_llm(self) -> "BaseLLM":
+        """Initialize the appropriate LangChain LLM based on provider."""
+        if self.provider == "openai":
+            api_key = os.environ.get("OPENAI_API_KEY")
+            if not api_key:
+                raise RuntimeError("OPENAI_API_KEY not set in environment variables")
+            return ChatOpenAI(
                 model=self.model,
-                max_tokens=4096,
-                messages=user_msgs,
-                temperature=temperature,
+                temperature=0.2,
+                api_key=api_key,
             )
-            if system_msg:
-                kwargs["system"] = system_msg
-
-            response = self.client.messages.create(**kwargs)
-            return {"message": {"content": response.content[0].text}}
-
-        elif self.provider in ("grok", "groq", "gemini", "openai"):
-            response = self.client.chat.completions.create(
+        
+        elif self.provider == "anthropic":
+            api_key = os.environ.get("ANTHROPIC_API_KEY")
+            if not api_key:
+                raise RuntimeError("ANTHROPIC_API_KEY not set in environment variables")
+            return ChatAnthropic(
                 model=self.model,
-                messages=messages,
-                temperature=temperature,
-                timeout=30,
+                temperature=0.2,
+                api_key=api_key,
             )
-            return {"message": {"content": response.choices[0].message.content}}
-
+        
+        elif self.provider == "gemini":
+            api_key = os.environ.get("GOOGLE_API_KEY")
+            if not api_key:
+                raise RuntimeError("GOOGLE_API_KEY not set in environment variables")
+            return ChatGoogleGenerativeAI(
+                model=self.model,
+                temperature=0.2,
+                google_api_key=api_key,
+            )
+        
         elif self.provider == "ollama":
-            try:
-                import ollama
-            except ImportError:
-                raise ImportError("Run: pip install ollama")
-            response = ollama.chat(model=self.model, messages=messages)
-            return response
-
+            return ChatOllama(
+                model=self.model,
+                temperature=0.2,
+                base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434"),
+            )
+        
         else:
             raise ValueError(f"Unknown provider: {self.provider}")
+
+    def chat(self, messages: List[Dict], temperature: float = 0.2) -> Dict:
+        """
+        Send a message to the LLM and get a response.
+        
+        Args:
+            messages: List of message dicts with 'role' and 'content' keys
+            temperature: Temperature for sampling (0-1)
+        
+        Returns:
+            {'message': {'content': str}} - Maintains backward compatibility
+        """
+        from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
+        
+        # Convert to LangChain message format
+        lang_messages: List[BaseMessage] = []
+        for msg in messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            
+            if role == "system":
+                lang_messages.append(SystemMessage(content=content))
+            elif role == "assistant":
+                lang_messages.append(AIMessage(content=content))
+            else:  # user or default
+                lang_messages.append(HumanMessage(content=content))
+        
+        # Call LLM with updated temperature
+        llm_with_temp = self.llm.with_config(
+            {"temperature": temperature}
+        )
+        
+        # For Ollama, create a new instance with updated temperature
+        if self.provider == "ollama":
+            llm_with_temp = ChatOllama(
+                model=self.model,
+                temperature=temperature,
+                base_url=os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434"),
+            )
+        
+        response = llm_with_temp.invoke(lang_messages)
+        
+        # Return in original format for backward compatibility
+        return {"message": {"content": response.content}}
+
+    def get_llm(self) -> "BaseLLM":
+        """Get the underlying LangChain LLM for advanced use cases."""
+        return self.llm

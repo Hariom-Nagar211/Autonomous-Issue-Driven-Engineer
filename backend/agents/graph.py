@@ -6,7 +6,7 @@ from backend.services.repo_service import full_pr_workflow
 
 class AIAgentSystem:
     """
-    Main orchestrator for the Autonomous AI Engineer pipeline:
+    Main orchestrator for the Autonomous Issue Driven Engineer pipeline:
     Issue → Retrieve context → Plan → Fix → (PR)
     """
 
