@@ -1,9 +1,9 @@
-﻿## 🚀 Autonomous AI Engineer
+﻿## 🚀 Autonomous Issue Driven Engineer
 
 AI agent that automatically fixes GitHub issues and opens pull requests.
 
 ## 🧠 Tech Stack
-FastAPI • Streamlit • RAG • LLM Agents • Docker • GitHub API
+FastAPI • LangChain • RAG • LLM Agents • Docker • GitHub API
 
 ## 🔥 Demo
 - Input: GitHub Issue
@@ -35,14 +35,11 @@ FastAPI • Streamlit • RAG • LLM Agents • Docker • GitHub API
 ### 8. Fixed Code Task Complete
 ![Fixed Code](assets/Image8.png)
 
-### 9. Optional(Also fix bugs manually from Streamlit UI without GitHub issues)
-![UI](assets/Image9.png)
-
 
 ## ✨ Key Features
 
 - 🔍 Intelligent code retrieval using RAG
-- 🤖 Autonomous agent loop (plan → edit → validate)
+- 🤖 Autonomous agent loop (plan → edit → validate-> self healing)
 - 🔧 Automatic bug fixing from GitHub issues
 - 🔁 Draft PR generation with commits
 - ⚡ Supports multiple LLM providers
@@ -61,41 +58,33 @@ The live GitHub flow looks like this:
 
 1. A developer opens a GitHub issue.
 2. GitHub sends an `issues` webhook to AIDE.
-3. AAIE clones the repository locally.
-4. AAIE parses the repository and builds a retrieval index.
-5. AAIE finds relevant files and creates a repair plan.
-6. AAIE edits the likely file(s), validates syntax, and runs tests when present.
-7. AAIE creates a branch, pushes the fix, and opens a draft PR.
-8. AAIE comments back on the issue with the result.
-
-You can also run AAIE manually from the Streamlit UI without GitHub webhooks.
+3. Clones the repository locally.
+4. Parses the repository and builds a retrieval index.
+5. Finds relevant files and creates a repair plan.
+6. Edits the likely file(s), validates syntax, and runs tests when present.
+7. Creates a branch, pushes the fix, and opens a draft PR.
+8. Comments back on the issue with the result.
 
 ## Project Structure
 
 ```text
 api/                    FastAPI app and GitHub webhook entrypoint
-backend/agents/         Planner, retriever, fixer, critic, orchestration
+backend/agents/         retriever, Planner, coder, fixer, critic, self healer, orchestration
 backend/rag/            Parser, retriever, vector store
-backend/services/       LLM, git/GitHub, execution helpers
-frontend/               Streamlit UI
+backend/services/       execution helpers, llm service, github service
 scripts/                Manual test and exploration scripts
 tests/                  Automated tests for the live autonomous flow
 repos/                  Cloned target repositories and job workspaces
 ```
 
-## Requirements
+## Supported LLM providers
 
-Before running the project, make sure you have:
+The project supports 4 LLM providers (in priority order):
 
-- Python 3.10+ recommended
-- Git installed and available in `PATH`
-- a GitHub token with repository write access
-- an LLM provider configured
-- optionally Docker Desktop if you want to run with containers
-
-If you want to use the default local LLM mode, also install:
-
-- Ollama
+- `openai` - OpenAI GPT models
+- `anthropic` - Anthropic Claude models
+- `gemini` - Google Gemini models
+- `ollama` - Local Ollama (default)
 
 ## Installation
 
@@ -103,347 +92,102 @@ If you want to use the default local LLM mode, also install:
 
 ```bash
 git clone <your-repo-url>
-cd Autonomous-AI-Engineer
+cd Autonomous-Issue-Driven-Engineer
 ```
 
-### 2. Create and activate a virtual environment
+### 2. Create a .env file
 
-Windows PowerShell:
-
-```powershell
-python -m venv .newvenv
-.\.newvenv\Scripts\Activate.ps1
-```
-
-macOS/Linux:
-
-```bash
-python -m venv .newvenv
-source .newvenv/bin/activate
-```
-
-### 3. Install Python dependencies
-
-```bash
-pip install -r requirements.txt
-pip install ollama  # If you want to use Ollama as your LLM provider
-```
-
-## Environment Variables
-
-Create a root `.env` file in the project directory. This file stores private configuration such as your GitHub token, webhook secret, and LLM settings.
+Example : 
 
 ```env
 GITHUB_TOKEN=your_github_token
 GITHUB_WEBHOOK_SECRET=your_random_webhook_secret
 
-LLM_PROVIDER=Your chosen provider, e.g. ollama, gemini, openai, etc.
+LLM_PROVIDER=Your chosen provider - openai, anthropic, gemini or ollama.
 LLM_MODEL=Your chosen model name for that provider, e.g. qwen2.5-coder:7b
-LLM_API_KEY=your_llm_api_key (If you are using a provider that requires an API key, e.g. OpenAI)
+OPENAI_API_KEY=your_key  // If using OpenAI
+ANTHROPIC_API_KEY=your_key  // If using Anthropic
+GOOGLE_API_KEY=your_key // If using Google Gemini
+OLLAMA_BASE_URL=http://host.docker.internal:11434
 ```
 
-### What each value means
+#### How to get github token
+1. Go to GitHub -> Settings -> Developer settings -> Personal access tokens -> Fine-grained tokens -> Generate new token
+2. Set permissions: Repository permissions -> Contents, Issues, Pull requests (Read and write)
+3. Copy the generated token and paste it into `.env` as `GITHUB_TOKEN`
 
-- `GITHUB_TOKEN`: a GitHub access token AIDE uses to clone repositories, comment on issues, push fix branches, and open pull requests.
-- `GITHUB_WEBHOOK_SECRET`: a random secret string shared between GitHub and AIDE so AIDE can verify webhook requests are really from GitHub.
-- `LLM_PROVIDER`: which model provider to use. The default is `ollama`.
-- `LLM_MODEL`: the model name for the selected provider.
-- `LLM_API_KEY`: the API key for the selected provider (if required).
+#### How to get github webhook secret
+Generate a strong random string (e.g. with Python `import secrets; print(secrets.token_hex(32))`) and paste it into `.env` as `GITHUB_WEBHOOK_SECRET`. Use the same value when configuring the GitHub webhook.
 
-### Supported LLM providers
+#### If using OpenAI, Anthropic, or Google Gemini, create API keys on their respective platforms and add them to `.env` as `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GOOGLE_API_KEY`.
 
-The project supports:
-
-- `ollama`
-- `gemini`
-- `groq`
-- `anthropic`
-- `openai`
-- `grok`
-
-### How to create a GitHub token
-
-Use a fine-grained personal access token.
-
-1. Open GitHub in your browser.
-2. Click your profile picture in the top-right.
-3. Go to `Settings`.
-4. In the left sidebar, open `Developer settings`.
-5. Open `Personal access tokens`.
-6. Select `Fine-grained tokens`.
-7. Click `Generate new token`.
-8. Give it a clear name, for example `AIDE Local Bot`.
-9. Choose an expiration date.
-10. Under `Resource owner`, select the account or organization that owns the repository.
-11. Under `Repository access`, choose either:
-    - `Only select repositories` and select the repo AIDE should work on
-    - `All repositories` if you want AIDE to work across all repos you own
-12. Under `Repository permissions`, add:
-    - `Contents` -> `Read and write`
-    - `Issues` -> `Read and write`
-    - `Pull requests` -> `Read and write`
-13. Generate the token.
-14. Copy the token immediately. GitHub will not show it again.
-15. Paste it into `.env`:
-
-```env
-GITHUB_TOKEN=github_pat_your_real_token_here
-```
-### How to create a webhook secret
-
-The webhook secret is not given by GitHub. You create it yourself.
-
-Generate a strong random value with Python:
-Example output:
-```text
-7f3c91b2a8e44f2fa1c5d9e6a0b7c124b2e1a9f0d8c7b6a5e4d3c2b1a0f9e8d7
-```
-
-Put that value in `.env`:
-
-```env
-GITHUB_WEBHOOK_SECRET=7f3c91b2a8e44f2fa1c5d9e6a0b7c124b2e1a9f0d8c7b6a5e4d3c2b1a0f9e8d7
-```
-
-Later, when you create the GitHub webhook, paste the exact same value into the webhook `Secret` field.
-
-## How To Run Autonomous AI Engineer
-
-AAIE can run in two ways. The recommended path is Docker because it keeps the backend and frontend setup reproducible. If you prefer direct Python development, use the non-Docker path.
-
-- Option 1: run with Docker Compose
-- Option 2: run without Docker, directly with Python
-
-Both options support the same product workflows:
-
-- Manual fixing without PR: AAIE analyzes and fixes code from the Streamlit UI, then you review the local job output yourself.
-- Manual fixing with draft PR: AAIE analyzes and fixes code from the Streamlit UI, then pushes a branch and opens a draft PR.
-- GitHub webhook automation: AAIE reacts automatically when a new GitHub issue is opened, fixes the code, and opens a draft PR.
-
-## Option 1: Run With Docker
-
-Use this path if you want the easiest repeatable setup. Docker Compose starts both services:
-
-- FastAPI backend on `http://localhost:8000`
-- Streamlit frontend on `http://localhost:18601`
-
-Ollama is expected to run on your host machine, not inside Docker. If you use a different LLM provider such as OpenAI, Groq, Gemini, Anthropic, or Grok, you can skip the Ollama step and configure that provider in `.env` instead.
-
-### 1. Start Ollama on the host
-
-Skip this step if you are not using `LLM_PROVIDER=ollama`.
-
-```bash
-ollama serve
-```
-
-If the model is not installed yet:
+#### If using Ollama :  
+1. make sure to set `LLM_PROVIDER=ollama` and `OLLAMA_BASE_URL=http://host.docker.internal:11434` in `.env`. 
+2. Install Ollama on your host machine from https://ollama.com/.
+3. Pull the model you want to use, for example:
 
 ```bash
 ollama pull qwen2.5-coder:7b
 ```
 
-### 2. Build and start Autonomous AI Engineer
+#### Also as we are going to use Docker :
+1. Install Docker desktop from https://www.docker.com/products/docker-desktop and 
+2. Run Docker desktop so that you can use Docker commands and Docker Compose to run the project.
 
-From the project root:
+### 3. Exposing the API with a tunnel and GitHub Webhook Setup
+To allow GitHub to send webhooks to your local development server, you need to expose it to the internet using a tunnel. Cloudflare Tunnel is a great option for this.
+
+1. Install Cloudflare Tunnel (cloudflared) from https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/downloads/
+2. Run the tunnel to expose your local API:
+
+```bash 
+cloudflared tunnel --url http://localhost:8000
+```
+3. Cloudflare will provide you with a public URL like `https://your-random-name.trycloudflare.com`. This is the URL GitHub will use to send webhooks.
+4. In your GitHub repository, go to `Settings -> Webhooks -> Add webhook` and configure it with:
+- Payload URL: `https://your-random-name.trycloudflare.com/api/webhook/github`
+- Content type: `application/json`
+- Secret: same value as `GITHUB_WEBHOOK_SECRET` in `.env`
+- Events: select `Issues`       
+- Active: enabled
+
+Note : Keep the tunnel running in a seprate terminal while you are developing and testing, so GitHub can reach your local API.
+
+### 5. Running the project
+
+1. Start the Ollama server ina separate terminal (if using Ollama):
 
 ```bash
+ollama serve
+```
+
+2. Now build docker image and run the project with Docker Compose in seprate terminal:
+
+```bash 
 docker compose build
 docker compose up
 ```
 
-Open the services:
+Now you can open a new GitHub issue to trigger the flow. Keep an eye on the terminal running Docker Compose to see the logs and results.
 
-- API health check: `http://localhost:8000/api/status`
-- Streamlit UI: `http://localhost:18601`
-
-The frontend container runs Streamlit on port `8501` internally, but Docker exposes it on host port `18601` to avoid conflicts with locally running Streamlit apps or Windows-reserved ports.
-
-### 3. Manual fixing without PR in Docker
-
-Use this when you want Autonomous AI Engineer to fix code locally but you do not want it to push a branch or open a PR.
-
-1. Open `http://localhost:18601`.
-2. Paste the GitHub repository URL.
-3. Describe the issue clearly.
-4. Leave `Open a draft Pull Request if the fix succeeds` unchecked.
-5. Click `Run AAIE`.
-6. Review the plan, files, and diff in the UI.
-
-### 4. Manual fixing with draft PR in Docker
-
-Use this when you want to manually submit a problem from the UI and have AAIE open a draft PR after a successful fix.
-
-1. Open `http://localhost:18601`.
-2. Paste the GitHub repository URL.
-3. Describe the issue clearly.
-4. Check `Open a draft Pull Request if the fix succeeds`.
-5. Confirm repository owner, repository name, and base branch.
-6. Click `Run AAIE`.
-
-This uses `GITHUB_TOKEN` from `.env` inside the API container. The token must have repository write permissions.
-
-### 5. GitHub webhook automation with Docker
-
-Use this when you want new GitHub issues to trigger AAIE automatically.
-
-Keep Docker Compose running:
-
-```bash
-docker compose up
-```
-
-In another terminal, expose the API with a tunnel:
-
-```bash
-cloudflared tunnel --url http://localhost:8000
-```
-
-Cloudflare will print a URL like:
-
-```text
-https://your-random-name.trycloudflare.com
-```
-
-Your GitHub webhook payload URL is:
-
-```text
-https://your-random-name.trycloudflare.com/api/webhook/github
-```
-
-In the target GitHub repository, go to `Settings -> Webhooks -> Add webhook` and use:
-
-- Payload URL: `https://your-random-name.trycloudflare.com/api/webhook/github`
-- Content type: `application/json`
-- Secret: same value as `GITHUB_WEBHOOK_SECRET` in `.env`
-- Events: select `Issues`
-- Active: enabled
-
-Then open a brand-new GitHub issue. Only newly opened issues trigger the current webhook flow.
-
-Example issue:
-
-- Title: `Fix syntax errors in helper.py`
-- Body: `Only fix helper.py. There is a syntax error preventing execution.`
-
-Expected result:
-
-- AAIE comments that it started
-- AAIE fixes the code
-- AAIE opens a draft PR
-- AAIE comments the PR link back on the issue
-
-## Option 2: Run Without Docker
-
-Use this path if you want to develop directly with Python and your local virtual environment.
-
-### 1. Start Ollama
-
-Skip this step if you are not using `LLM_PROVIDER=ollama`.
-
-```bash
-ollama serve
-```
-
-If the model is not installed yet:
-
-```bash
-ollama pull qwen2.5-coder:7b
-```
-
-### 2. Start the backend API
-
-In one terminal:
-
-```bash
-uvicorn api.main:app --host 0.0.0.0 --port 8000
-```
-
-Health check:
-
-```text
-http://localhost:8000/api/status
-```
-
-Expected response:
-
-```json
-{"status":"ok","service":"Autonomous AI Engineer","version":"1.0.0","active_jobs":0}
-```
-
-### 3. Start the Streamlit frontend
-
-In another terminal:
-
-```bash
-streamlit run frontend/app.py
-```
-
-Open:
-
-```text
-http://localhost:8501
-```
-
-The frontend talks to the API at `http://localhost:8000` by default.
-
-### 4. Manual fixing without PR without Docker
-
-1. Open `http://localhost:8501`.
-2. Paste the GitHub repository URL.
-3. Describe the issue clearly.
-4. Leave `Open a draft Pull Request if the fix succeeds` unchecked.
-5. Click `Run AAIE`.
-6. Review the local job output yourself.
-
-### 5. Manual fixing with draft PR without Docker
-
-1. Open `http://localhost:8501`.
-2. Paste the GitHub repository URL.
-3. Describe the issue clearly.
-4. Check `Open a draft Pull Request if the fix succeeds`.
-5. Confirm repository owner, repository name, and base branch.
-6. Click `Run AAIE`.
-
-This requires `GITHUB_TOKEN` in `.env` with repository write permissions.
-
-### 6. GitHub webhook automation without Docker
-
-Keep the backend API running:
-
-```bash
-uvicorn api.main:app --host 0.0.0.0 --port 8000
-```
-
-In another terminal, expose it with Cloudflare Tunnel:
-
-```bash
-cloudflared tunnel --url http://localhost:8000
-```
-
-Use the generated tunnel URL as your GitHub webhook payload URL with `/api/webhook/github` appended.
-
-Example:
-
-```text
-https://your-random-name.trycloudflare.com/api/webhook/github
-```
-
-Then configure the GitHub webhook with:
-
-- Content type: `application/json`
-- Secret: same value as `GITHUB_WEBHOOK_SECRET` in `.env`
-- Events: select `Issues`
-- Active: enabled
-
-Open a new GitHub issue to trigger AAIE.
 
 ## Future Improvements
 
-- Multi-file reasoning improvements
-- Better test generation
-- CI/CD integration
-- Performance optimization for large repos
+1. **Intelligent Testing Pipeline**
+- Automatically generate and run tests to validate fixes before PR creation.
+2. **CI/CD and DevOps Automation** 
+- Automated Docker optimization and Kubernetes deployment generation.
+- Integrate GitHub Actions pipelines for continuous integration. 
+3. **Memory and Learning System**
+- Implement a long-term memory system for the agent to learn from past issues and fixes.
+- Use vector databases to store and retrieve past issue contexts and solutions.
+- Store reusable engineering patterns and architectural decisions.
+4. **Human-in-the-Loop Collaboration**
+- Allow developers to approve, reject, or modify agent-generated plans.
+5. **Multi-Modal Engineering Support**
+- Support for diagram understanding, UI screenshots, and architecture images.
+- Enable code generation directly from whiteboard designs or flowcharts.
+
 
 ## License
 
