@@ -15,18 +15,3 @@ services:
       - .:/app
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
-  frontend:
-    image: autonomous-ai-engineer:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: streamlit run frontend/app.py --server.address 0.0.0.0 --server.port 8501
-    ports:
-      - "127.0.0.1:18601:8501"
-    environment:
-      AIDE_API_URL: http://api:8000
-    depends_on:
-      - api
-    volumes:
-      - .:/app
