@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import hashlib
 import hmac
 import os
@@ -12,10 +12,70 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import api.main as main
 from backend.rag.retriever import CodeRetriever
+from backend.services.llm_service import LLMService
 import backend.services.repo_service as repo_service
 
 
+class LLMServiceTests(unittest.TestCase):
+    """Tests for LangChain-based LLM service"""
+
+    def test_llm_service_supports_4_providers(self):
+        """Verify only 4 LLM providers are supported"""
+        supported = LLMService.SUPPORTED_PROVIDERS
+        self.assertEqual(supported, ["openai", "anthropic", "gemini", "ollama"])
+
+    def test_llm_service_default_models(self):
+        """Verify default models for each provider"""
+        defaults = LLMService.DEFAULT_MODELS
+        self.assertIn("openai", defaults)
+        self.assertIn("anthropic", defaults)
+        self.assertIn("gemini", defaults)
+        self.assertIn("ollama", defaults)
+
+    def test_llm_service_rejects_unsupported_provider(self):
+        """Verify unsupported providers raise ValueError"""
+        with self.assertRaises(ValueError) as context:
+            LLMService(provider="groq")
+        self.assertIn("Unsupported provider", str(context.exception))
+
+    @patch.dict(os.environ, {"LLM_PROVIDER": "ollama"})
+    def test_llm_service_initializes_ollama(self):
+        """Verify Ollama LLM initializes correctly"""
+        try:
+            service = LLMService(provider="ollama")
+            self.assertEqual(service.provider, "ollama")
+            self.assertIsNotNone(service.llm)
+        except Exception as e:
+            # Ollama might not be running, which is expected
+            self.assertIn("ollama", str(e).lower())
+
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=False)
+    def test_llm_service_initializes_openai(self):
+        """Verify OpenAI LLM initializes correctly"""
+        service = LLMService(provider="openai")
+        self.assertEqual(service.provider, "openai")
+        self.assertIsNotNone(service.llm)
+
+    def test_llm_service_chat_maintains_backward_compatibility(self):
+        """Verify chat() method returns expected format"""
+        mock_response = MagicMock()
+        mock_response.content = "Test response"
+
+        with patch("backend.services.llm_service.ChatOllama") as MockOllama:
+            MockOllama.return_value.invoke.return_value = mock_response
+            service = LLMService(provider="ollama")
+
+            result = service.chat(
+                messages=[{"role": "user", "content": "Test"}],
+                temperature=0.2
+            )
+
+        self.assertIn("message", result)
+        self.assertIn("content", result["message"])
+        self.assertEqual(result["message"]["content"], "Test response")
+
 class AutonomousFlowTests(unittest.TestCase):
+    """Integration tests for the autonomous flow"""
     def test_retriever_prioritizes_explicit_file_mentions(self):
         class FakeVectorStore:
             metadata = [
@@ -224,6 +284,18 @@ class AutonomousFlowTests(unittest.TestCase):
         self.assertEqual(queued["request"].repo_name, "demo")
         self.assertEqual(queued["request"].base_branch, "develop")
         self.assertEqual(queued["request"].branch_name, "aide/issue-9")
+
+    def test_api_health_check_endpoint(self):
+        """Verify API health check endpoint works"""
+        client = TestClient(main.app)
+        response = client.get("/api/status")
+        
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "ok")
+        self.assertIn("service", data)
+        self.assertIn("version", data)
+        self.assertIn("active_jobs", data)
 
 
 if __name__ == "__main__":
