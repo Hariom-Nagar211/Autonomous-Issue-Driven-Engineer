@@ -91,7 +91,7 @@ The project supports 4 LLM providers (in priority order):
 ### 1. Clone the repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/Hariom-Nagar211/Autonomous-Issue-Driven-Engineer
 cd Autonomous-Issue-Driven-Engineer
 ```
 
